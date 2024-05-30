@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const bodyParser = require('body-parser');
 const jwt = require('jsonwebtoken');
@@ -8,23 +9,56 @@ const port = process.env.PORT || 3000;
 
 app.use(bodyParser.json());
 
-const secretKey = 'kjsfg!)=)4diof25sfdg302dfg57438)!#$#70dfgf234asdnan';
+const secretKey = process.env.SECRET_KEY;
+
+// Middleware de autenticación para el administrador
+function authenticateAdmin(req, res, next) {
+  const authHeader = req.headers['authorization'];
+  if (authHeader) {
+    const encodedCredentials = authHeader.split(' ')[1];
+    const decodedCredentials = Buffer.from(encodedCredentials, 'base64').toString('ascii');
+    const [username, password] = decodedCredentials.split(':');
+
+    if (username === process.env.ADMIN_USERNAME && password === process.env.ADMIN_PASSWORD) {
+      return next();
+    }
+  }
+  res.status(403).json({ error: 'Acceso denegado: Solo el administrador puede generar la URL para el ambiente de producción.' });
+}
+
+// Middleware de autenticación para usuarios regulares
+function authenticate(req, res, next) {
+  const authHeader = req.headers['authorization'];
+  if (authHeader) {
+    const token = authHeader.split(' ')[1];
+    jwt.verify(token, secretKey, (err, user) => {
+      if (err) {
+        return res.status(403).send('Forbidden');
+      }
+      req.user = user;
+      next();
+    });
+  } else {
+    res.status(403).json({ error: 'Acceso denegado: Se requiere un token.' });
+  }
+}
 
 // Endpoints de los ambientes
 const environments = {
-    local: 'http://localhost:3000/IngresoExterno/?token=',
-    qa: 'https://ffvvmqa.somosbelcorp.com/portal/IngresoSistema/IngresoExterno/?token=',
-    ams: 'https://ffvvmams.somosbelcorp.com/portal/IngresoSistema/IngresoExterno/?token=',
-    prd: 'https://ffvv.somosbelcorp.com/portal/IngresoSistema/IngresoExterno/?token='
-    
+  local: process.env.URL_LOCAL,
+  qa: process.env.URL_QA,
+  ams: process.env.URL_AMS,
+  ppr: process.env.URL_PPR,
+  prd: process.env.URL_PRD
 };
 
 const environmentNames = {
-    local: 'LOCAL',
-    ams: 'AMS',
-    qa: 'QA',
-    prd: 'PRD'
-  };
+  local: 'LOCAL',
+  qa: 'QA',
+  ams: 'AMS',
+  ppr: 'PPR',
+  prd: 'PRD'
+};
 
 function createCustomJWT(payload, secret) {
   // Encabezado con orden personalizado
@@ -52,6 +86,13 @@ function createCustomJWT(payload, secret) {
 // Endpoint para generar el token
 app.post('/generate-token', (req, res) => {
   const { data, environment } = req.body;
+  if (environment === 'prod') {
+    authenticateAdmin(req, res, next);
+  } else {
+    authenticate(req, res, next);
+  }
+}, (req, res) => {
+  const { data, environment } = req.body;
 
   if (!data || !environment) {
     return res.status(400).send('Faltan datos en el body de datos o ambiente.');
@@ -60,7 +101,6 @@ app.post('/generate-token', (req, res) => {
   if (!environments[environment]) {
     return res.status(400).send('Ambiente no válido.');
   }
-
   // Generar el token sin el campo `iat`
   const token = createCustomJWT(data, secretKey);
 

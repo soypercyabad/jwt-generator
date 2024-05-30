@@ -11,6 +11,11 @@
         "src": "/(.*)",
         "dest": "server.js"
       }
-    ]
+    ],
+    "env": {
+      "SECRET_KEY": "@secret_key",
+      "ADMIN_USERNAME": "@admin_username",
+      "ADMIN_PASSWORD": "@admin_password"
+    }
   }
   
