@@ -31,13 +31,11 @@ function authenticate(req, res, next) {
   const authHeader = req.headers['authorization'];
   if (authHeader) {
     const token = authHeader.split(' ')[1];
-    jwt.verify(token, secretKey, (err, user) => {
-      if (err) {
-        return res.status(403).send('Forbidden');
-      }
-      req.user = user;
+    if (token === secretKey) {
       next();
-    });
+    } else {
+      res.status(403).json({ error: 'Forbidden - Token inválido.' });
+    }
   } else {
     res.status(403).json({ error: 'Acceso denegado: Se requiere un token.' });
   }
@@ -61,17 +59,14 @@ const environmentNames = {
 };
 
 function createCustomJWT(payload, secret) {
-  // Encabezado con orden personalizado
   const header = {
     "typ": "JWT",
     "alg": "HS256"
   };
 
-  // Codificar el encabezado y el payload
   const encodedHeader = base64url.encode(JSON.stringify(header));
   const encodedPayload = base64url.encode(JSON.stringify(payload));
 
-  // Crear la firma usando el módulo 'crypto' para asegurar que coincide con jwt.io
   const signature = base64url.encode(
     require('crypto')
       .createHmac('sha256', secret)
@@ -79,37 +74,49 @@ function createCustomJWT(payload, secret) {
       .digest()
   );
 
-  // Crear el token final
   return `${encodedHeader}.${encodedPayload}.${signature}`;
 }
 
-// Endpoint para generar el token
-app.post('/generate-token', (req, res) => {
-  const { data, environment } = req.body;
-  if (environment === 'prod') {
+// Middleware para verificar autenticación del administrador o usuario regular
+function verifyAuthentication(req, res, next) {
+  const { environment } = req.body;
+  if (environment.toLowerCase() === 'prd') {
     authenticateAdmin(req, res, next);
   } else {
-    authenticate(req, res, next);
+    const authHeader = req.headers['authorization'];
+    if (authHeader) {
+      const encodedCredentials = authHeader.split(' ')[1];
+      const decodedCredentials = Buffer.from(encodedCredentials, 'base64').toString('ascii');
+      const [username, password] = decodedCredentials.split(':');
+
+      if (username === process.env.ADMIN_USERNAME && password === process.env.ADMIN_PASSWORD) {
+        return next();
+      } else {
+        authenticate(req, res, next);
+      }
+    } else {
+      authenticate(req, res, next);
+    }
   }
-}, (req, res) => {
+}
+
+// Endpoint para generar el token
+app.post('/generate-token', verifyAuthentication, (req, res) => {
   const { data, environment } = req.body;
 
   if (!data || !environment) {
-    return res.status(400).send('Faltan datos en el body de datos o ambiente.');
+    return res.status(400).json({ error: 'Faltan datos en el body de datos o ambiente.' });
   }
 
-  if (!environments[environment]) {
-    return res.status(400).send('Ambiente no válido.');
+  if (!environments[environment.toLowerCase()]) {
+    return res.status(400).json({ error: 'Ambiente no válido.' });
   }
-  // Generar el token sin el campo `iat`
+
   const token = createCustomJWT(data, secretKey);
-
-  // Construir la URL
-  const tokenUrl = `${environments[environment]}${token}`;
-  const environmentName = environmentNames[environment];
+  const tokenUrl = `${environments[environment.toLowerCase()]}${token}`;
+  const environmentName = environmentNames[environment.toLowerCase()];
 
   res.json({
-    //"TOKEN GENERADO": token,
     [`URL Generada ${environmentName}:`]: tokenUrl
   });
 });
