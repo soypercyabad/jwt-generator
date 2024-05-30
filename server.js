@@ -54,7 +54,7 @@ app.post('/generate-token', (req, res) => {
   const { data, environment } = req.body;
 
   if (!data || !environment) {
-    return res.status(400).send('Faltan datos o ambiente.');
+    return res.status(400).send('Faltan datos en el body de datos o ambiente.');
   }
 
   if (!environments[environment]) {
