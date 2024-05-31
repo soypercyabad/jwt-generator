@@ -1,21 +1,25 @@
 {
-    "version": 2,
-    "builds": [
-      {
-        "src": "server.js",
-        "use": "@vercel/node"
-      }
-    ],
-    "routes": [
-      {
-        "src": "/(.*)",
-        "dest": "server.js"
-      }
-    ],
-    "env": {
-      "SECRET_KEY": "@secret_key",
-      "ADMIN_USERNAME": "@admin_username",
-      "ADMIN_PASSWORD": "@admin_password"
+  "version": 2,
+  "builds": [
+    {
+      "src": "server.js",
+      "use": "@vercel/node"
     }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "server.js"
+    }
+  ],
+  "env": {
+    "SECRET_KEY": "kjsfg!)=)4diof25sfdg302dfg57438)!#$#70dfgf234asdnan",
+    "ADMIN_USERNAME": "PMolinaAbad@moli.com",
+    "ADMIN_PASSWORD": "6AD113864EA0357A220429DDA7A48BCB57B0C7FD",
+    "URL_LOCAL": "http://localhost:3000/IngresoExterno/?token=",
+    "URL_QA": "https://ffvvmqa.somosbelcorp.com/portal/IngresoSistema/IngresoExterno/?token=",
+    "URL_AMS": "https://ffvvmams.somosbelcorp.com/portal/IngresoSistema/IngresoExterno/?token=/",
+    "URL_PPR": "https://ffvvmppr.somosbelcorp.com/portal/IngresoSistema/IngresoExterno/?token=",
+    "URL_PRD": "https://ffvv.somosbelcorp.com/portal/IngresoSistema/IngresoExterno/?token="
   }
-  
+}
