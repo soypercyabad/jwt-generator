@@ -5,7 +5,7 @@ const jwt = require('jsonwebtoken');
 const base64url = require('base64url');
 const axios = require('axios');
 const winston = require('winston');
-require('winston-daily-rotate-file');
+const { Loggly } = require('winston-loggly-bulk');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -14,26 +14,13 @@ app.use(bodyParser.json());
 
 const secretKey = process.env.SECRET_KEY;
 
-// Configuración de winston para rotación y eliminación de logs
-const transport = new winston.transports.DailyRotateFile({
-  filename: 'logs/application-%DATE%.log',
-  datePattern: 'YYYY-MM-DD',
-  zippedArchive: true,
-  maxSize: '20m',
-  maxFiles: '14d' // Elimina los archivos de log después de 14 días
-});
-
-const logger = winston.createLogger({
-  level: 'info',
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.prettyPrint()
-  ),
-  transports: [
-    new winston.transports.Console(), // Para ver los logs en la consola
-    transport
-  ]
-});
+// Configurar winston para enviar logs a Loggly
+winston.add(new Loggly({
+  token: process.env.LOGGLY_TOKEN,
+  subdomain: process.env.LOGGLY_SUBDOMAIN,
+  tags: ['Winston-NodeJS'],
+  json: true
+}));
 
 // Middleware de autenticación para el administrador
 function authenticateAdmin(req, res, next) {
@@ -73,7 +60,7 @@ async function getClientLocation(ip) {
     const response = await axios.get(`http://ip-api.com/json/${ip}`);
     return response.data;
   } catch (error) {
-    logger.error({ message: `Error al obtener la ubicación del cliente: ${error.message}` });
+    winston.error(`Error al obtener la ubicación del cliente: ${error.message}`);
     return null;
   }
 }
@@ -158,10 +145,14 @@ app.post('/generate-token', verifyAuthentication, async (req, res) => {
   const location = await getClientLocation(clientIp);
 
   // Log en formato JSON con múltiples mensajes
-  logger.info({
-    'Token solicitado por el usuario': req.user ? req.user.username : 'Usuario no autenticado',
-    'Ubicación del cliente': location ? `${location.city}, ${location.regionName}, ${location.country}` : 'Ubicación no disponible',
-    'URL Generada para el ambiente': `${environmentName}: ${tokenUrl}`,
+  winston.info({
+    message: [
+      `Token solicitado por el usuario: ${req.user ? req.user.username : 'Usuario no autenticado'}`,
+      `Ubicación del cliente: ${location ? `${location.city}, ${location.regionName}, ${location.country}` : 'Ubicación no disponible'}`,
+      `URL Generada para el ambiente ${environmentName}: ${tokenUrl}`
+    ],
+    level: 'info',
+    timestamp: new Date().toISOString()
   });
 
   res.json({
