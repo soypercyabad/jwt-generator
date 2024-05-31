@@ -20,6 +20,8 @@
     "URL_QA": "https://ffvvmqa.somosbelcorp.com/portal/IngresoSistema/IngresoExterno/?token=",
     "URL_AMS": "https://ffvvmams.somosbelcorp.com/portal/IngresoSistema/IngresoExterno/?token=/",
     "URL_PPR": "https://ffvvmppr.somosbelcorp.com/portal/IngresoSistema/IngresoExterno/?token=",
-    "URL_PRD": "https://ffvv.somosbelcorp.com/portal/IngresoSistema/IngresoExterno/?token="
+    "URL_PRD": "https://ffvv.somosbelcorp.com/portal/IngresoSistema/IngresoExterno/?token=",
+    "LOGGLY_TOKEN":"600d0d86-bfa6-4647-991d-ad0360ecdb7a",
+    "LOGGLY_SUBDOMAIN":"molibad"
   }
 }
